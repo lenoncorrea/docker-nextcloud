@@ -5,4 +5,4 @@ This git contains information for Docker operation with MariaDB database and Tra
 Run a simple command in root folder: 
 "docker-compose up -d"
 
-**Change the necessary settings for your application in the "Dockerfile" file**
+**Change the necessary settings for your application in the "docker-compose.yml" file**
