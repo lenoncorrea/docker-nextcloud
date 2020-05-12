@@ -1,0 +1,78 @@
+version: '3'
+services:
+  mariadb:
+    container_name: client-mariadb
+    image: mariadb:10.4.12
+    networks:
+      - database
+    volumes:
+      - mariadb_1:/etc/mysql/conf.d
+      - mariadb_2:/var/lib/mysql
+    environment:
+      - MYSQL_ROOT_PASSWORD=fYEqsWdPdi2Ss16ls5mMfqBhNiioMwde
+      - MYSQL_DATABASE=nextcloud
+      - MYSQL_USER=nextcloud
+      - MYSQL_PASSWORD=7ig9Nax4eDldwPwC3of6sQIYQf8n57Ia
+    restart: always
+
+  nextcloud:
+    container_name: client-nextcloud
+    image: nextcloud:18.0.4
+    labels:
+      - traefik.http.routers.nextcloud.rule=Host(`client-nextcloud.docker.localhost`)
+      - traefik.http.routers.whoami.tls=true
+      - traefik.http.routers.whoami.tls.certresolver=le
+    networks:
+      - database
+      - nextcloud
+    depends_on:
+      - mariadb
+    volumes:
+      - nextcloud_1:/var/www/html
+    environment:
+      - MYSQL_DATABASE=nextcloud
+      - MYSQL_USER=nextcloud
+      - MYSQL_PASSWORD=7ig9Nax4eDldwPwC3of6sQIYQf8n57Ia
+      - MYSQL_HOST=mariadb
+    restart: always
+
+  traefik:
+    container_name: traefik
+    image: traefik:v2.2
+    command:
+      - --api.insecure=true
+      - --providers.docker
+      - --entrypoints.web.address=:80
+      - --entryPoints.web.address=:80
+      - --entryPoints.websecure.address=:443
+      - --certificatesResolvers.le.acme.email=your@mail.com.br
+      - --certificatesResolvers.le.acme.storage=acme.json
+      - --certificatesResolvers.le.acme.tlsChallenge=true
+      - --certificatesResolvers.le.acme.httpChallenge=true
+      - --certificatesResolvers.le.acme.httpChallenge.entryPoint=web
+    depends_on:
+      - nextcloud
+    ports:
+      - "80:80"
+      - "8080:8080"
+    networks:
+      - nextcloud
+      - gerencia
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    labels:
+      # Redirect all HTTP to HTTPS permanently
+      - traefik.http.routers.http_catchall.rule=HostRegexp(`{any:.+}`)
+      - traefik.http.routers.http_catchall.entrypoints=web
+      - traefik.http.routers.http_catchall.middlewares=https_redirect
+      - traefik.http.middlewares.https_redirect.redirectscheme.scheme=https
+      - traefik.http.middlewares.https_redirect.redirectscheme.permanent=true
+
+volumes:
+  mariadb_1:
+  mariadb_2:
+  nextcloud_1:
+networks: 
+  database:
+  nextcloud:
+  gerencia:
